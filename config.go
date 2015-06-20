@@ -42,8 +42,13 @@ type Config struct {
 	Timeout   Duration
 	Tags      map[string]string
 
-	agent   *ast.Table
-	plugins map[string]*ast.Table
+	agent               *ast.Table
+	plugins             map[string]*ast.Table
+	prometheusCollector *ast.Table
+}
+
+type PrometheusCollector struct {
+	ListenAddress string
 }
 
 // Plugins returns the configured plugins as a map of name -> plugin toml
@@ -134,6 +139,14 @@ func (c *Config) ApplyAgent(v interface{}) error {
 // ApplyPlugin takes defined plugin names and applies them to the given
 // interface, returning a ConfiguredPlugin object in the end that can
 // be inserted into a runningPlugin by the agent.
+func (c *Config) ApplyPrometheusCollector(v interface{}) error {
+	if c.prometheusCollector != nil {
+		return toml.UnmarshalTable(c.prometheusCollector, v)
+	}
+
+	return nil
+}
+
 func (c *Config) ApplyPlugin(name string, v interface{}) (*ConfiguredPlugin, error) {
 	cp := &ConfiguredPlugin{Name: name}
 
@@ -273,6 +286,8 @@ func LoadConfig(path string) (*Config, error) {
 			}
 		case "agent":
 			c.agent = subtbl
+		case "prometheus_collector":
+			c.prometheusCollector = subtbl
 		default:
 			c.plugins[name] = subtbl
 		}
@@ -357,6 +372,10 @@ database = "telegraf" # required.
 # interval = "10s"
 # debug = false
 # hostname = "prod3241"
+
+[prometheus_collector]
+# If set, expose all metrics on this address for Prometheus
+# listen_address = ":9115"
 
 # PLUGINS
 
